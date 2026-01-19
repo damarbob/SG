@@ -5,6 +5,7 @@ namespace Config;
 use CodeIgniter\Events\Events;
 use CodeIgniter\Exceptions\FrameworkException;
 use CodeIgniter\HotReloader\HotReloader;
+use CodeIgniter\Shield\Entities\User;
 
 /*
  * --------------------------------------------------------------------
@@ -33,7 +34,7 @@ Events::on('pre_system', static function (): void {
             ob_end_flush();
         }
 
-        ob_start(static fn ($buffer) => $buffer);
+        ob_start(static fn($buffer) => $buffer);
     }
 
     /*
@@ -52,4 +53,19 @@ Events::on('pre_system', static function (): void {
             });
         }
     }
+});
+
+Events::on('register', static function (User $user) {
+    // Check if this is the ONLY user in the system (meaning they are the first)
+    // We check for count === 1 because the current user is already inserted.
+    $userModel = model('UserModel');
+    $count     = $userModel->countAllResults();
+
+    /** @var \Config\AuthGroups $authGroupConfig */
+    $authGroupConfig = config('AuthGroups');
+
+    $groupToCheck = ($count === 1) ? 'superadmin' : $authGroupConfig->defaultGroup;
+
+    // Sync the group
+    $user->syncGroups($groupToCheck);
 });
