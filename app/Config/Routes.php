@@ -7,4 +7,7 @@ use CodeIgniter\Router\RouteCollection;
  */
 $routes->get('/', 'Home::index');
 
-service('auth')->routes($routes);
+// Authentication routes
+$routes->group('auth', static function ($routes) {
+    service('auth')->routes($routes);
+});
