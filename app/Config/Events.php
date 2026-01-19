@@ -64,7 +64,7 @@ Events::on('register', static function (User $user) {
     /** @var \Config\AuthGroups $authGroupConfig */
     $authGroupConfig = config('AuthGroups');
 
-    $groupToCheck = ($count === 1) ? 'superadmin' : $authGroupConfig->defaultGroup;
+    $groupToCheck = ($count === 1) ? $authGroupConfig->defaultFirstUserGroup : $authGroupConfig->defaultGroup;
 
     // Sync the group
     $user->syncGroups($groupToCheck);

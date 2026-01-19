@@ -27,6 +27,14 @@ class AuthGroups extends ShieldAuthGroups
 
     /**
      * --------------------------------------------------------------------
+     * Default First User Group
+     * --------------------------------------------------------------------
+     * The group that the first registered user is added to (overrides defaultGroup).
+     */
+    public string $defaultFirstUserGroup = 'superadmin';
+
+    /**
+     * --------------------------------------------------------------------
      * Groups
      * --------------------------------------------------------------------
      * An associative array of the available groups in the system, where the keys
