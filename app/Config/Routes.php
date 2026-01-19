@@ -8,8 +8,16 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Home::index');
 
 // Authentication routes
-$routes->group('auth', static function ($routes) {
+$routes->group('auth', ['namespace' => 'App\Controllers\Auth'], static function ($routes) {
     service('auth')->routes($routes);
+
+    $routes->group('access-token', ['filter' => 'tokens'], static function ($routes) {
+        $routes->get('list', 'AccessTokenController::index');
+        $routes->post('generate', 'AccessTokenController::generate');
+        $routes->post('revoke', 'AccessTokenController::revoke');
+        $routes->post('revoke-token', 'AccessTokenController::revokeToken');
+        $routes->post('revoke-all', 'AccessTokenController::revokeAll');
+    });
 });
 
 // API routes
