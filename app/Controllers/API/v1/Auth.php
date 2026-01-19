@@ -41,7 +41,7 @@ class Auth extends ResourceController
                 'user'        => $user,
             ]);
 
-            return $this->failUnauthorized('Invalid login credentials');
+            return $this->failUnauthorized(lang('Auth.badAttempt'));
         }
 
         // 4. Generate the Access Token
