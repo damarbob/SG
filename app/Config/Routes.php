@@ -14,7 +14,7 @@ $routes->group('auth', ['namespace' => 'App\Controllers\Auth'], static function 
     $routes->group('access-token', ['filter' => 'tokens'], static function ($routes) {
         $routes->get('list', 'AccessTokenController::index');
         $routes->post('generate', 'AccessTokenController::generate');
-        $routes->post('revoke', 'AccessTokenController::revoke');
+        $routes->delete('(:num)', 'AccessTokenController::delete/$1');
         $routes->post('revoke-token', 'AccessTokenController::revokeToken');
         $routes->post('revoke-all', 'AccessTokenController::revokeAll');
     });

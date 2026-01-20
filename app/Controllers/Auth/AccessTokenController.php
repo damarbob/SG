@@ -42,24 +42,22 @@ class AccessTokenController extends BaseController
     }
 
     /**
-     * Revoke an access token by name.
+     * Delete an access token by ID.
      *
+     * @param int|string|null $id
      * @return \CodeIgniter\HTTP\ResponseInterface
      */
-    public function revoke()
+    public function delete($id = null)
     {
-        // Validate
-        if (! $this->validate(['name' => 'required|string|min_length[1]|max_length[255]'])) {
-            return $this->failValidationErrors($this->validator->getErrors());
+        if (empty($id)) {
+            return $this->failValidationErrors('ID is required');
         }
-
-        $name = $this->request->getVar('name');
 
         /** @var UserIdentityModel $identityModel */
         $identityModel = model(UserIdentityModel::class);
         $identityModel->where('user_id', auth()->user()->id)
+            ->where('id', $id)
             ->where('type', AccessTokens::ID_TYPE_ACCESS_TOKEN)
-            ->where('name', $name)
             ->delete();
 
         return $this->respondNoContent();
