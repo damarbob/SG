@@ -4,9 +4,79 @@ namespace App\Controllers\API\v1;
 
 use CodeIgniter\RESTful\ResourceController;
 use CodeIgniter\Shield\Validation\ValidationRules;
+use CodeIgniter\Events\Events;
+use CodeIgniter\Shield\Models\UserModel;
 
 class Auth extends ResourceController
 {
+    /**
+     * Register a new user
+     *
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     */
+    public function register()
+    {
+        // 1. Check if registration is allowed
+        if (! setting('Auth.allowRegistration')) {
+            return $this->failForbidden(lang('Auth.registerDisabled'));
+        }
+
+        // 2. Get the validation rules
+        $rules = $this->getValidationRules(true);
+
+        // 3. Validate Input
+        // We validate the JSON input directly
+        $input = $this->request->getJsonVar(null, true); // Get all JSON as array
+
+        if (! $this->validateData($input, $rules)) {
+            return $this->fail($this->validator->getErrors());
+        }
+
+        // 4. Create the User
+        /** @var UserModel $users */
+        $users = auth()->getProvider(); // Get Configured User Provider
+
+        // Create the user entity with allowed fields
+        $allowedFields = array_keys($rules);
+        $userData = array_intersect_key($input, array_flip($allowedFields));
+
+        $user = $users->createNewUser($userData);
+
+        try {
+            // Save the user
+            if (! $users->save($user)) {
+                return $this->fail($users->errors());
+            }
+        } catch (\CodeIgniter\Shield\Exceptions\ValidationException $e) {
+            return $this->fail($users->errors());
+        }
+
+        // 5. Post-Registration Setup
+
+        // Re-fetch user to get the ID and complete object
+        $user = $users->findById($users->getInsertID());
+
+        // Add to default group
+        $users->addToDefaultGroup($user);
+
+        // Trigger the standard 'register' event.
+        Events::trigger('register', $user);
+
+        // Activate user
+        $user->activate();
+
+        // 6. Return Response
+        return $this->respondCreated([
+            'status' => 201,
+            'message' => lang('Auth.registerSuccess'),
+            'user'   => [
+                'id'       => $user->id,
+                'username' => $user->username,
+                'email'    => $user->email,
+            ]
+        ]);
+    }
+
     public function login()
     {
         // 1. Get the credentials
@@ -45,7 +115,6 @@ class Auth extends ResourceController
         }
 
         // 4. Generate the Access Token
-        // You can name the token anything, e.g., 'mobile-app'
         $token = $user->generateAccessToken('api-login');
 
         // 5. Record Login Attempt
@@ -78,11 +147,16 @@ class Auth extends ResourceController
     /**
      * Returns the rules that should be used for validation.
      *
+     * @param bool $isRegistration
      * @return array<string, array<string, list<string>|string>>
      */
-    protected function getValidationRules(): array
+    protected function getValidationRules(bool $isRegistration = false): array
     {
         $rules = new ValidationRules();
+
+        if ($isRegistration) {
+            return $rules->getRegistrationRules();
+        }
 
         return $rules->getLoginRules();
     }

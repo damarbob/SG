@@ -24,6 +24,7 @@ $routes->group('auth', ['namespace' => 'App\Controllers\Auth'], static function 
 $routes->group('api', static function ($routes) {
     $routes->group('v1', ['namespace' => 'App\Controllers\API\v1', 'filter' => 'cors'], static function ($routes) {
         $routes->group('auth', ['filter' => 'auth-rates'], static function ($routes) {
+            $routes->post('register', 'Auth::register');
             $routes->post('login', 'Auth::login');
         });
     });
