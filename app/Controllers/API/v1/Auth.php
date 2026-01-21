@@ -169,4 +169,36 @@ class Auth extends ResourceController
 
         return $rules->getLoginRules();
     }
+
+    /**
+     * Log the user out (revoke current token)
+     *
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     */
+    public function logout()
+    {
+        $source = $this->request->getHeaderLine('Authorization');
+        // pattern: Bearer <token>
+        if (preg_match('/Bearer\s(\S+)/', $source, $matches)) {
+            $rawToken = $matches[1];
+            auth()->user()->revokeAccessToken($rawToken);
+        }
+
+        return $this->respondNoContent();
+    }
+
+    /**
+     * Get current user details
+     *
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     */
+    public function me()
+    {
+        $user = auth()->user();
+        return $this->respond([
+            'id'       => $user->id,
+            'username' => $user->username,
+            'email'    => $user->email,
+        ]);
+    }
 }

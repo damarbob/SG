@@ -27,5 +27,10 @@ $routes->group('api', static function ($routes) {
             $routes->post('register', 'Auth::register');
             $routes->post('login', 'Auth::login');
         });
+
+        $routes->group('auth', ['filter' => 'tokens'], static function ($routes) {
+            $routes->post('logout', 'Auth::logout');
+            $routes->get('me', 'Auth::me');
+        });
     });
 });
