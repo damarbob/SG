@@ -114,6 +114,15 @@ class Auth extends ResourceController
             return $this->failUnauthorized(lang('Auth.badAttempt'));
         }
 
+        // 4. Check User Status
+        if (! $user->active) {
+            return $this->failUnauthorized(lang('Auth.notActivated'));
+        }
+
+        if ($user->isBanned()) {
+            return $this->failUnauthorized(lang('Auth.userBanned'));
+        }
+
         // 4. Generate the Access Token
         $token = $user->generateAccessToken('api-login');
 
