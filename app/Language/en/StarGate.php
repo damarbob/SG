@@ -9,4 +9,6 @@ return [
     'emailIgnoreRequest'    => 'If you did not request this login, please ignore this email.',
     'copyright'             => '&copy; {0} {1}. All rights reserved.',
     'login'                 => 'Login',
+    'notActivated'          => 'You must activate your account before logging in.',
+    'userBanned'            => 'Can not log you in as you are currently banned.',
 ];

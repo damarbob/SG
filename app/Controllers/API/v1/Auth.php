@@ -116,11 +116,11 @@ class Auth extends ResourceController
 
         // 4. Check User Status
         if (! $user->active) {
-            return $this->failUnauthorized(lang('Auth.notActivated'));
+            return $this->failUnauthorized(lang('StarGate.notActivated'));
         }
 
         if ($user->isBanned()) {
-            return $this->failUnauthorized(lang('Auth.userBanned'));
+            return $this->failUnauthorized(lang('StarGate.userBanned'));
         }
 
         // 4. Generate the Access Token
