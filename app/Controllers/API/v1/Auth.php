@@ -79,24 +79,33 @@ class Auth extends ResourceController
 
     public function login()
     {
-        // 1. Get the credentials
-        // Use getJsonVar to enforce JSON, fallback to getPost only if necessary, but strictly void getVar (GET)
-        $email    = $this->request->getJsonVar('email') ?? $this->request->getPost('email');
-        $password = $this->request->getJsonVar('password') ?? $this->request->getPost('password');
-
+        // 1. Get the validation rules
         $rules = $this->getValidationRules();
 
-        // Validate strictly using the inputs we just fetched, to ensure we validate what we use
-        if (! $this->validateData(['email' => $email, 'password' => $password], $rules)) {
+        // 2. Get the input
+        // We validate the JSON input directly
+        $input = $this->request->getJsonVar(null, true);
+
+        // 3. Validate Input
+        if (! $this->validateData($input, $rules)) {
             return $this->fail($this->validator->getErrors());
         }
 
-        // 2. Retrieve the User (without logging them in via Session)
-        /** @var \CodeIgniter\Shield\Models\UserModel */
-        $users = auth()->getProvider(); // Get the UserModel
-        $user  = $users->findByCredentials(['email' => $email]);
+        // 4. Retrieve Credentials
+        // We get the validated data to ensure we only use fields that were in the rules
+        $validData = $this->validator->getValidated();
 
-        // 3. Verify the Password Manually (Mitigate Timing Attacks)
+        // Separate the password from the other credentials
+        $password = $validData['password'];
+        $credentials = $validData;
+        unset($credentials['password']);
+
+        // 5. Retrieve the User (without logging them in via Session)
+        /** @var \CodeIgniter\Shield\Models\UserModel */
+        $users = auth()->getProvider(); // Get Configured User Provider
+        $user  = $users->findByCredentials($credentials);
+
+        // 6. Verify the Password Manually (Mitigate Timing Attacks)
         // If user is not found, we still want to run the password verify to mimic the time it takes.
         // We use a dummy hash for this purpose. 
         // Note: The dummy hash should be a valid bcrypt hash.
@@ -107,14 +116,14 @@ class Auth extends ResourceController
 
         if (! $user || ! $check) {
             \CodeIgniter\Events\Events::trigger('failedLogin', [
-                'credentials' => ['email' => $email],
+                'credentials' => $credentials,
                 'user'        => $user,
             ]);
 
             return $this->failUnauthorized(lang('Auth.badAttempt'));
         }
 
-        // 4. Check User Status
+        // 7. Check User Status
         if (! $user->active) {
             return $this->failUnauthorized(lang('StarGate.notActivated'));
         }
@@ -123,25 +132,25 @@ class Auth extends ResourceController
             return $this->failUnauthorized(lang('StarGate.userBanned'));
         }
 
-        // 4. Generate the Access Token
+        // 8. Generate the Access Token
         $token = $user->generateAccessToken('api-login');
 
-        // 5. Record Login Attempt
+        // 9. Record Login Attempt
         /** @var \CodeIgniter\Shield\Models\LoginModel $loginModel */
         $loginModel = model(\CodeIgniter\Shield\Models\LoginModel::class);
         $loginModel->recordLoginAttempt(
             'email_password',
-            $email,
+            implode('|', $credentials), // Use credentials as identifier (e.g. email)
             true,
             $this->request->getIPAddress(),
             (string) $this->request->getUserAgent(),
             $user->id
         );
 
-        // 6. Trigger Login Event
+        // 10. Trigger Login Event
         \CodeIgniter\Events\Events::trigger('login', $user);
 
-        // 7. Return the Raw Token
+        // 11. Return the Raw Token
         return $this->respond([
             'status' => 200,
             'access_token'  => $token->raw_token, // IMPORTANT: accessible only once here
@@ -181,7 +190,9 @@ class Auth extends ResourceController
         // pattern: Bearer <token>
         if (preg_match('/Bearer\s(\S+)/', $source, $matches)) {
             $rawToken = $matches[1];
-            auth()->user()->revokeAccessToken($rawToken);
+            if ($user = auth()->user()) {
+                $user->revokeAccessToken($rawToken);
+            }
         }
 
         return $this->respondNoContent();
