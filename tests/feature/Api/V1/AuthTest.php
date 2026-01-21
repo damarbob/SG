@@ -160,7 +160,9 @@ class AuthTest extends CIUnitTestCase
             'password' => 'StrongPassword123!',
         ];
 
-        $result = $this->post('api/v1/auth/login', $loginData);
+        $result = $this->withBody(json_encode($loginData))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/login');
 
         $result->assertStatus(200);
 
@@ -193,7 +195,9 @@ class AuthTest extends CIUnitTestCase
             'password' => 'WrongPassword',
         ];
 
-        $result = $this->post('api/v1/auth/login', $loginData);
+        $result = $this->withBody(json_encode($loginData))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/login');
 
         $result->assertStatus(401);
     }
@@ -204,7 +208,9 @@ class AuthTest extends CIUnitTestCase
             'email'    => 'not-an-email',
         ];
 
-        $result = $this->post('api/v1/auth/login', $loginData);
+        $result = $this->withBody(json_encode($loginData))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/login');
 
         $result->assertStatus(400);
     }
@@ -216,7 +222,9 @@ class AuthTest extends CIUnitTestCase
             'password' => 'StrongPassword123!',
         ];
 
-        $result = $this->post('api/v1/auth/login', $loginData);
+        $result = $this->withBody(json_encode($loginData))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/login');
 
         $result->assertStatus(401);
     }
@@ -245,7 +253,9 @@ class AuthTest extends CIUnitTestCase
             'password' => 'StrongPassword123!',
         ];
 
-        $result = $this->post('api/v1/auth/login', $loginData);
+        $result = $this->withBody(json_encode($loginData))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/login');
 
         $result->assertStatus(401);
     }
@@ -274,8 +284,54 @@ class AuthTest extends CIUnitTestCase
             'password' => 'StrongPassword123!',
         ];
 
-        $result = $this->post('api/v1/auth/login', $loginData);
+        $result = $this->withBody(json_encode($loginData))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/login');
 
         $result->assertStatus(401);
+    }
+
+    public function testMe()
+    {
+        $user = $this->createTestUser('me_user', 'me@example.com');
+        $token = $user->generateAccessToken('test-token');
+
+        $result = $this->withHeaders(['Authorization' => 'Bearer ' . $token->raw_token])
+            ->get('api/v1/auth/me');
+
+        $result->assertStatus(200);
+        $result->assertJSONFragment(['email' => 'me@example.com']);
+    }
+
+    public function testLogout()
+    {
+        $user = $this->createTestUser('logout_user', 'logout@example.com');
+        $token = $user->generateAccessToken('test-token');
+
+        $result = $this->withHeaders(['Authorization' => 'Bearer ' . $token->raw_token])
+            ->post('api/v1/auth/logout');
+
+        $result->assertStatus(204);
+
+        // Assert token is gone
+        $this->assertEmpty($user->accessTokens());
+    }
+
+    private function createTestUser($username, $email)
+    {
+        $data = [
+            'username' => $username,
+            'email'    => $email,
+            'password' => 'StrongPassword123!',
+            'active'   => 1,
+        ];
+
+        $user = new \CodeIgniter\Shield\Entities\User($data);
+        $user->password_hash = service('passwords')->hash('StrongPassword123!');
+
+        $users = model(UserModel::class);
+        $users->save($user);
+
+        return $users->findById($users->getInsertID());
     }
 }
