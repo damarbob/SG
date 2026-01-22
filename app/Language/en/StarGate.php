@@ -11,4 +11,6 @@ return [
     'login'                 => 'Login',
     'notActivated'          => 'You must activate your account before logging in.',
     'userBanned'            => 'Can not log you in as you are currently banned.',
+    'userNotFound'          => 'Unable to locate the specified user.',
+    'magicLinkNoCallback'   => 'Unable to process Magic Link request. Callback URL is not configured.',
 ];

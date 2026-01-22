@@ -26,6 +26,8 @@ $routes->group('api', static function ($routes) {
         $routes->group('auth', ['filter' => 'auth-rates'], static function ($routes) {
             $routes->post('register', 'Auth::register');
             $routes->post('login', 'Auth::login');
+            $routes->post('magic-link', 'Auth::magicLink');
+            $routes->post('magic-link/verify', 'Auth::verifyMagicLink');
         });
 
         $routes->group('auth', ['filter' => 'tokens'], static function ($routes) {

@@ -6,6 +6,9 @@ use CodeIgniter\RESTful\ResourceController;
 use CodeIgniter\Shield\Validation\ValidationRules;
 use CodeIgniter\Events\Events;
 use CodeIgniter\Shield\Models\UserModel;
+use CodeIgniter\Shield\Authentication\Authenticators\Session;
+use CodeIgniter\Shield\Models\UserIdentityModel;
+use CodeIgniter\I18n\Time;
 
 class Auth extends ResourceController
 {
@@ -210,6 +213,166 @@ class Auth extends ResourceController
             'id'       => $user->id,
             'username' => $user->username,
             'email'    => $user->email,
+        ]);
+    }
+
+    /**
+     * Request a Magic Link
+     *
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     */
+    public function magicLink()
+    {
+        if (! setting('Auth.allowMagicLinkLogins')) {
+            return $this->failForbidden(lang('Auth.magicLinkDisabled'));
+        }
+
+        $rules = [
+            'email' => 'required|valid_email',
+        ];
+
+        $input = $this->request->getJsonVar(null, true);
+
+        if (! $this->validateData($input, $rules)) {
+            return $this->fail($this->validator->getErrors());
+        }
+
+        $callbackUrl = config('StarGate')->magicLinkCallbackUrl;
+
+        if (empty($callbackUrl)) {
+            return $this->failServerError(lang('StarGate.magicLinkNoCallback'));
+        }
+
+        $email = $input['email'];
+
+        /** @var UserModel $users */
+        $users = auth()->getProvider();
+        $user  = $users->findByCredentials(['email' => $email]);
+
+        // If user not found, we silently return success to prevent email enumeration
+        if ($user === null) {
+            return $this->respond(['message' => lang('Auth.checkYourEmail')]);
+        }
+
+        /** @var UserIdentityModel $identityModel */
+        $identityModel = model(UserIdentityModel::class);
+
+        // Delete any previous magic-link identities
+        $identityModel->deleteIdentitiesByType($user, Session::ID_TYPE_MAGIC_LINK);
+
+        // Generate the code and save it as an identity
+        $token = bin2hex(random_bytes(10));
+
+        $identityModel->insert([
+            'user_id' => $user->id,
+            'type'    => Session::ID_TYPE_MAGIC_LINK,
+            'secret'  => $token,
+            'expires' => Time::now()->addSeconds(setting('Auth.magicLinkLifetime')),
+        ]);
+
+        // Send Email
+        helper('email');
+        $helper = emailer(['mailType' => 'html']);
+        $email  = $helper->setFrom(setting('Email.fromEmail'), setting('Email.fromName') ?? '');
+        $email->setTo($user->email);
+        $email->setSubject(lang('Auth.magicLinkSubject'));
+
+        $email->setMessage(view(
+            'Auth/Email/magic_link_email',
+            [
+                'token'        => $token,
+                'user'         => $user,
+                'callback_url' => $callbackUrl,
+                'ipAddress'    => $this->request->getIPAddress(),
+            ]
+        ));
+
+        if ($email->send(false) === false) {
+            log_message('error', $email->printDebugger(['headers']));
+            return $this->failServerError(lang('Auth.unableSendEmailToUser', [$user->email]));
+        }
+
+        return $this->respond(['message' => lang('Auth.checkYourEmail')]);
+    }
+
+    /**
+     * Verify Magic Link and Return Access Token
+     *
+     * @return \CodeIgniter\HTTP\ResponseInterface
+     */
+    public function verifyMagicLink()
+    {
+        if (! setting('Auth.allowMagicLinkLogins')) {
+            return $this->failForbidden(lang('Auth.magicLinkDisabled'));
+        }
+
+        $token = $this->request->getJsonVar('token');
+
+        if (empty($token)) {
+            return $this->failValidationErrors(lang('Auth.magicTokenNotFound'));
+        }
+
+        /** @var UserIdentityModel $identityModel */
+        $identityModel = model(UserIdentityModel::class);
+
+        // Check for token
+        $identity = $identityModel->getIdentityBySecret(Session::ID_TYPE_MAGIC_LINK, $token);
+
+        if ($identity === null) {
+            return $this->failUnauthorized(lang('Auth.magicTokenNotFound'));
+        }
+
+        // Check expiration
+        if (Time::now()->isAfter($identity->expires)) {
+            return $this->failUnauthorized(lang('Auth.magicLinkExpired'));
+        }
+
+        // Get the user
+        /** @var UserModel $users */
+        $users = auth()->getProvider();
+        $user  = $users->findById($identity->user_id);
+
+        if (! $user) {
+            return $this->failUnauthorized(lang('StarGate.userNotFound'));
+        }
+
+        // Delete the identity so it cannot be used again
+        $identityModel->delete($identity->id);
+
+        // Check if user is active/banned
+        if (! $user->active) {
+            return $this->failUnauthorized(lang('StarGate.notActivated'));
+        }
+        if ($user->isBanned()) {
+            return $this->failUnauthorized(lang('StarGate.userBanned'));
+        }
+
+        // Generate Access Token
+        $accessToken = $user->generateAccessToken('magic-link-login');
+
+        // Record Login Attempt
+        /** @var \CodeIgniter\Shield\Models\LoginModel $loginModel */
+        $loginModel = model(\CodeIgniter\Shield\Models\LoginModel::class);
+        $loginModel->recordLoginAttempt(
+            Session::ID_TYPE_MAGIC_LINK,
+            $user->email, // Identifier
+            true,
+            $this->request->getIPAddress(),
+            (string) $this->request->getUserAgent(),
+            $user->id
+        );
+
+        Events::trigger('magicLogin', $user);
+        Events::trigger('login', $user);
+
+        return $this->respond([
+            'status'       => 200,
+            'access_token' => $accessToken->raw_token,
+            'user'         => [
+                'id'       => $user->id,
+                'username' => $user->username,
+                'email'    => $user->email,
+            ]
         ]);
     }
 }
