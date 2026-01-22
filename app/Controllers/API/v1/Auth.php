@@ -228,7 +228,7 @@ class Auth extends ResourceController
         }
 
         $rules = [
-            'email' => 'required|valid_email',
+            'email' => 'required|valid_email|max_length[254]',
         ];
 
         $input = $this->request->getJsonVar(null, true);
@@ -306,11 +306,21 @@ class Auth extends ResourceController
             return $this->failForbidden(lang('Auth.magicLinkDisabled'));
         }
 
-        $token = $this->request->getJsonVar('token');
+        $input = $this->request->getJsonVar(null, true);
+        $rules = [
+            'token' => [
+                'rules' => 'required|string',
+                'errors' => [
+                    'required' => lang('StarGate.tokenRequired')
+                ]
+            ]
+        ];
 
-        if (empty($token)) {
-            return $this->failValidationErrors(lang('Auth.magicTokenNotFound'));
+        if (! $this->validateData($input, $rules)) {
+            return $this->failValidationErrors($this->validator->getErrors());
         }
+
+        $token = $input['token'];
 
         /** @var UserIdentityModel $identityModel */
         $identityModel = model(UserIdentityModel::class);
