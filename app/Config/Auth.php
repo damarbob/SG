@@ -22,7 +22,7 @@ use CodeIgniter\Shield\Authentication\Authenticators\JWT;
 use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Authentication\Passwords\CompositionValidator;
 use CodeIgniter\Shield\Authentication\Passwords\DictionaryValidator;
-use CodeIgniter\Shield\Authentication\Passwords\NothingPersonalValidator;
+use App\Authentication\Passwords\NothingPersonalValidator;
 use CodeIgniter\Shield\Authentication\Passwords\PwnedValidator;
 use CodeIgniter\Shield\Authentication\Passwords\ValidatorInterface;
 use CodeIgniter\Shield\Models\UserModel;
