@@ -334,4 +334,225 @@ class AuthTest extends CIUnitTestCase
 
         return $users->findById($users->getInsertID());
     }
+
+    public function testMagicLinkSuccess()
+    {
+        $user = $this->createTestUser('magic_user', 'magic@example.com');
+
+        $data = [
+            'email' => 'magic@example.com',
+        ];
+
+        // Ensure allowMagicLinkLogins is true
+        $original = setting('Auth.allowMagicLinkLogins');
+        config('Auth')->allowMagicLinkLogins = true;
+
+        // Mock StarGate config
+        $originalCallback = config('StarGate')->magicLinkCallbackUrl;
+        config('StarGate')->magicLinkCallbackUrl = 'https://example.com/verify';
+
+        $result = $this->withBody(json_encode($data))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/magic-link');
+
+        config('Auth')->allowMagicLinkLogins = $original;
+        config('StarGate')->magicLinkCallbackUrl = $originalCallback;
+
+        $result->assertStatus(200);
+
+        // Verify Identity created
+        $this->seeInDatabase('auth_identities', [
+            'user_id' => $user->id,
+            'type'    => 'magic-link',
+        ]);
+    }
+
+    public function testMagicLinkMissingConfig()
+    {
+        $user = $this->createTestUser('noconfig_user', 'noconfig@example.com');
+
+        $data = ['email' => 'noconfig@example.com'];
+
+        $original = setting('Auth.allowMagicLinkLogins');
+        config('Auth')->allowMagicLinkLogins = true;
+
+        // Mock Missing Config
+        $originalCallback = config('StarGate')->magicLinkCallbackUrl;
+        config('StarGate')->magicLinkCallbackUrl = '';
+
+        $result = $this->withBody(json_encode($data))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/magic-link');
+
+        config('Auth')->allowMagicLinkLogins = $original;
+        config('StarGate')->magicLinkCallbackUrl = $originalCallback;
+
+        $result->assertStatus(500);
+    }
+
+    public function testVerifyMagicLinkSuccess()
+    {
+        $user = $this->createTestUser('verify_user', 'verify@example.com');
+
+        // Manually create token
+        $token = 'test-magic-token';
+        $identities = model(\CodeIgniter\Shield\Models\UserIdentityModel::class);
+        $identities->insert([
+            'user_id' => $user->id,
+            'type'    => 'magic-link',
+            'secret'  => $token,
+            'expires' => \CodeIgniter\I18n\Time::now()->addHours(1),
+        ]);
+
+        $original = setting('Auth.allowMagicLinkLogins');
+        config('Auth')->allowMagicLinkLogins = true;
+
+        $data = ['token' => $token];
+
+        $result = $this->withBody(json_encode($data))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/magic-link/verify');
+
+        config('Auth')->allowMagicLinkLogins = $original;
+
+        $result->assertStatus(200);
+        $json = json_decode($result->response()->getBody());
+        $this->assertObjectHasProperty('access_token', $json);
+
+        // Verify token consumed
+        $this->dontSeeInDatabase('auth_identities', ['secret' => $token]);
+    }
+
+    public function testMagicLinkUserNotFound()
+    {
+        $data = ['email' => 'unknown@example.com'];
+
+        $original = setting('Auth.allowMagicLinkLogins');
+        setting('Auth.allowMagicLinkLogins', true);
+
+        // Mock StarGate config
+        $originalCallback = config('StarGate')->magicLinkCallbackUrl;
+        config('StarGate')->magicLinkCallbackUrl = 'https://example.com/verify';
+
+        $result = $this->withBody(json_encode($data))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/magic-link');
+
+        setting('Auth.allowMagicLinkLogins', $original);
+        config('StarGate')->magicLinkCallbackUrl = $originalCallback;
+
+        // Should be 200 OK (Silent Success)
+        $result->assertStatus(200);
+        $result->assertJSON(['message' => lang('Auth.checkYourEmail')]);
+    }
+
+    public function testVerifyMagicLinkInvalidToken()
+    {
+        $original = setting('Auth.allowMagicLinkLogins');
+        config('Auth')->allowMagicLinkLogins = true;
+
+        $data = ['token' => 'invalid-token'];
+
+        $result = $this->withBody(json_encode($data))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/magic-link/verify');
+
+        config('Auth')->allowMagicLinkLogins = $original;
+
+        $result->assertStatus(401);
+    }
+
+    public function testVerifyMagicLinkExpiredToken()
+    {
+        $user = $this->createTestUser('expired_user', 'expired@example.com');
+
+        // Manually create expired token
+        $token = 'expired-token';
+        $identities = model(\CodeIgniter\Shield\Models\UserIdentityModel::class);
+        $identities->insert([
+            'user_id' => $user->id,
+            'type'    => 'magic-link',
+            'secret'  => $token,
+            'expires' => \CodeIgniter\I18n\Time::now()->subHours(1),
+        ]);
+
+        $original = setting('Auth.allowMagicLinkLogins');
+        config('Auth')->allowMagicLinkLogins = true;
+
+        $data = ['token' => $token];
+
+        $result = $this->withBody(json_encode($data))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/magic-link/verify');
+
+        config('Auth')->allowMagicLinkLogins = $original;
+
+        $result->assertStatus(401);
+    }
+
+    public function testVerifyMagicLinkUserInactive()
+    {
+        $user = $this->createTestUser('inactive_magic', 'inactive_magic@example.com');
+
+        $users = model(UserModel::class);
+        $user->deactivate();
+        $users->save($user);
+
+        // Manually create token
+        $token = 'inactive-token';
+        $identities = model(\CodeIgniter\Shield\Models\UserIdentityModel::class);
+        $identities->insert([
+            'user_id' => $user->id,
+            'type'    => 'magic-link',
+            'secret'  => $token,
+            'expires' => \CodeIgniter\I18n\Time::now()->addHours(1),
+        ]);
+
+        $original = setting('Auth.allowMagicLinkLogins');
+        setting('Auth.allowMagicLinkLogins', true);
+
+        $data = ['token' => $token];
+
+        $result = $this->withBody(json_encode($data))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/magic-link/verify');
+
+        setting('Auth.allowMagicLinkLogins', $original);
+
+        $result->assertStatus(401);
+        $result->assertJSONFragment(['messages' => ['error' => lang('StarGate.notActivated')]]);
+    }
+
+    public function testVerifyMagicLinkUserBanned()
+    {
+        $user = $this->createTestUser('banned_magic', 'banned_magic@example.com');
+
+        $users = model(UserModel::class);
+        $users->addToDefaultGroup($user);
+        $user->ban('Testing ban');
+
+        // Manually create token
+        $token = 'banned-token';
+        $identities = model(\CodeIgniter\Shield\Models\UserIdentityModel::class);
+        $identities->insert([
+            'user_id' => $user->id,
+            'type'    => 'magic-link',
+            'secret'  => $token,
+            'expires' => \CodeIgniter\I18n\Time::now()->addHours(1),
+        ]);
+
+        $original = setting('Auth.allowMagicLinkLogins');
+        setting('Auth.allowMagicLinkLogins', true);
+
+        $data = ['token' => $token];
+
+        $result = $this->withBody(json_encode($data))
+            ->withHeaders(['Content-Type' => 'application/json'])
+            ->post('api/v1/auth/magic-link/verify');
+
+        setting('Auth.allowMagicLinkLogins', $original);
+
+        $result->assertStatus(401);
+        $result->assertJSONFragment(['messages' => ['error' => lang('StarGate.userBanned')]]);
+    }
 }
