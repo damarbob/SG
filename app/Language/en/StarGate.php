@@ -13,4 +13,7 @@ return [
     'userBanned'            => 'Can not log you in as you are currently banned.',
     'userNotFound'          => 'Unable to locate the specified user.',
     'magicLinkNoCallback'   => 'Unable to process Magic Link request. Callback URL is not configured.',
+    'idRequired'            => 'ID is required.',
+    'tokenRequired'         => 'Token is required.',
+    'nameRequired'          => 'Name is required.',
 ];

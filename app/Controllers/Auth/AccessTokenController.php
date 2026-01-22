@@ -30,12 +30,23 @@ class AccessTokenController extends BaseController
      */
     public function generate()
     {
-        // Validate
-        if (! $this->validate(['name' => 'required|string|min_length[1]|max_length[255]'])) {
+        $rules = [
+            'name' => [
+                'label' => 'Auth.name',
+                'rules' => 'required|string|min_length[1]|max_length[255]',
+                'errors' => [
+                    'required' => lang('StarGate.nameRequired')
+                ]
+            ]
+        ];
+
+        $input = $this->request->getJsonVar(null, true);
+
+        if (! $this->validateData($input, $rules)) {
             return $this->failValidationErrors($this->validator->getErrors());
         }
 
-        $name  = $this->request->getVar('name');
+        $name  = $input['name'];
         $token = auth()->user()->generateAccessToken($name);
 
         return $this->respondCreated(['token' => $token->raw_token]);
@@ -50,7 +61,7 @@ class AccessTokenController extends BaseController
     public function delete($id = null)
     {
         if (empty($id)) {
-            return $this->failValidationErrors('ID is required');
+            return $this->failValidationErrors(lang('StarGate.idRequired'));
         }
 
         /** @var UserIdentityModel $identityModel */
@@ -70,12 +81,22 @@ class AccessTokenController extends BaseController
      */
     public function revokeToken()
     {
+        $rules = [
+            'token' => [
+                'rules' => 'required|string',
+                'errors' => [
+                    'required' => lang('StarGate.tokenRequired')
+                ]
+            ]
+        ];
+        $input = $this->request->getJsonVar(null, true);
+
         // Validate
-        if (! $this->validate(['token' => 'required|string'])) {
+        if (! $this->validateData($input, $rules)) {
             return $this->failValidationErrors($this->validator->getErrors());
         }
 
-        auth()->user()->revokeAccessToken($this->request->getVar('token'));
+        auth()->user()->revokeAccessToken($input['token']);
 
         return $this->respondNoContent();
     }
