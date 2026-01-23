@@ -67,7 +67,7 @@ class AccessTokenTest extends CIUnitTestCase
         $token = $user->generateAccessToken('list-token');
 
         $result = $this->withHeaders(['Authorization' => 'Bearer ' . $token->raw_token])
-            ->get('auth/access-token/list');
+            ->get('api/v1/access-token/list');
 
         $result->assertStatus(200);
         $json = json_decode($result->response()->getBody(), true);
@@ -88,7 +88,7 @@ class AccessTokenTest extends CIUnitTestCase
                 'Authorization' => 'Bearer ' . $token->raw_token,
                 'Content-Type'  => 'application/json'
             ])
-            ->post('auth/access-token/generate');
+            ->post('api/v1/access-token/generate');
 
         $result->assertStatus(201);
         $json = json_decode($result->response()->getBody());
@@ -118,7 +118,7 @@ class AccessTokenTest extends CIUnitTestCase
             ->first();
 
         $result = $this->withHeaders(['Authorization' => 'Bearer ' . $token1->raw_token])
-            ->delete('auth/access-token/' . $identity->id);
+            ->delete('api/v1/access-token/' . $identity->id);
 
         $result->assertStatus(204);
 
@@ -138,7 +138,7 @@ class AccessTokenTest extends CIUnitTestCase
                 'Authorization' => 'Bearer ' . $token1->raw_token,
                 'Content-Type'  => 'application/json'
             ])
-            ->post('auth/access-token/revoke-token');
+            ->post('api/v1/access-token/revoke-token');
 
         $result->assertStatus(204);
 
@@ -156,7 +156,7 @@ class AccessTokenTest extends CIUnitTestCase
         $token2 = $user->generateAccessToken('token-2');
 
         $result = $this->withHeaders(['Authorization' => 'Bearer ' . $token1->raw_token])
-            ->post('auth/access-token/revoke-all');
+            ->post('api/v1/access-token/revoke-all');
 
         $result->assertStatus(204);
 
