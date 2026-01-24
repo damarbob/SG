@@ -9,6 +9,12 @@ use OpenApi\Attributes as OA;
 
 #[OA\Info(title: "Placeholder", version: "1.0.0")]
 #[OA\Server(url: "http://localhost", description: "Placeholder")]
+#[OA\SecurityScheme(
+    securityScheme: "bearerAuth",
+    type: "http",
+    scheme: "bearer",
+    description: "Enter your bearer token in the format **Bearer &lt;token&gt;**"
+)]
 class Swagger extends BaseController
 {
     /**
