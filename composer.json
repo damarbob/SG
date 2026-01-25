@@ -10,9 +10,16 @@
     "slack": "https://codeigniterchat.slack.com"
   },
   "minimum-stability": "dev",
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://asset-packagist.org"
+    }
+  ],
   "require": {
     "php": "^8.1",
     "codeigniter4/framework": "^4.0",
+    "codeigniter4/queue": "dev-develop",
     "codeigniter4/shield": "^1.2",
     "damarbob/stardust": "^0.2.0-alpha",
     "zircote/swagger-php": "^5.0"
