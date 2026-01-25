@@ -35,7 +35,7 @@ class Swagger extends BaseController
     public function json()
     {
         $generator = new Generator();
-        $openapi = $generator->generate([APPPATH . 'Controllers']);
+        $openapi = $generator->generate([APPPATH . 'Controllers', APPPATH . 'Docs']);
 
         // Dynamic Configuration
         $openapi->info->title = config('StarGate')->appName . ' API';
