@@ -34,6 +34,8 @@ $routes->group('api', static function ($routes) {
             $routes->post('revoke-token', 'AccessTokenController::revokeToken');
             $routes->post('revoke-all', 'AccessTokenController::revokeAll');
         });
+
+        $routes->resource('models', ['controller' => 'Models', 'filter' => 'tokens']);
     });
 
     $routes->group('docs', ['namespace' => 'App\Controllers\API'], static function ($routes) {

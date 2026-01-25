@@ -16,4 +16,9 @@ return [
     'idRequired'            => 'ID is required.',
     'tokenRequired'         => 'Token is required.',
     'nameRequired'          => 'Name is required.',
+    'modelNotFound'         => 'Model with ID {0} not found.',
+    'modelInvalidFields'    => 'Invalid fields JSON structure. Must contain "id" and "type".',
+    'modelCreated'          => 'Model created successfully',
+    'modelUpdated'          => 'Model updated successfully',
+    'modelDeleted'          => 'Model deleted successfully',
 ];
