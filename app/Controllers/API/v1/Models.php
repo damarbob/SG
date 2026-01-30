@@ -19,22 +19,14 @@ class Models extends ResourceController
 
     public function index()
     {
-        // Direct Model access for efficient pagination
-        /** @var \StarDust\Models\ModelsModel $model */
-        $model = model('StarDust\Models\ModelsModel');
-
         $page    = (int)($this->request->getVar('page') ?? 1);
         $perPage = 20;
 
         // Count total for pager
-        $total = $model->stardust()->countAllResults();
+        $total = $this->manager->count();
 
         // Fetch data
-        $data = $model->stardust()
-            ->orderBy('created_at', 'DESC')
-            ->limit($perPage, ($page - 1) * $perPage)
-            ->get()
-            ->getResultArray();
+        $data = $this->manager->paginate($page, $perPage);
 
         return $this->respond([
             'models' => $data,
@@ -70,11 +62,6 @@ class Models extends ResourceController
         }
 
         $input = $this->request->getJSON(true);
-        $input['fields'] = $this->validateFieldsJson($input['fields']);
-
-        if ($input['fields'] === false) {
-            return $this->fail(['fields' => lang('StarGate.modelInvalidFields')]);
-        }
 
         try {
             $modelId = $this->manager->create($input, auth()->id());
@@ -89,7 +76,10 @@ class Models extends ResourceController
 
     public function update($id = null)
     {
-        if (!$this->manager->find($id)) {
+        // Fetch current state to support partial updates
+        $current = $this->manager->find($id);
+
+        if (!$current) {
             return $this->failNotFound(lang('StarGate.modelNotFound', [$id]));
         }
 
@@ -102,36 +92,24 @@ class Models extends ResourceController
             return $this->fail($this->validator->getErrors());
         }
 
-        $input = $this->request->getJSON(true); // Get all input, including JSON raw
+        $input = $this->request->getJSON(true); // Get all input
+        $updateData = [];
 
-        // Fetch current state to support partial updates
-        $current = $this->manager->find($id);
+        // Map inputs to update array
+        if (isset($input['name'])) $updateData['name'] = $input['name'];
+        if (isset($input['slug'])) $updateData['slug'] = $input['slug'];
 
-        // Merge input with current data
-        $finalData = [];
-        $finalData['name']   = $input['name'] ?? $current['name'];
-        // Fields needs special handling: if input has it, validate it. If not, use current.
         if (isset($input['fields'])) {
-            $checked = $this->validateFieldsJson($input['fields']);
-            if ($checked === false) {
-                return $this->fail(['fields' => lang('StarGate.modelInvalidFields')]);
-            }
-            $finalData['fields'] = $checked;
-        } else {
-            // Use existing fields. Note: find() returns fields as JSON string usually? 
-            // Let's verify. ModelsManager returns ->get()->getResultArray().
-            // DB returns JSON string from fields column.
-            $finalData['fields'] = $current['fields'];
+            // Strict validation moved to ModelsManager
+            $updateData['fields'] = $input['fields'];
         }
 
-        // Also carry over slug if it existed in input (though valid rules removed it, manager might use it)
-        // But for update, we usually don't change slug in this simple logic.
-        // Let's ignore slug update for now to avoid complexity or allow if input has it.
-        // We removed validation for slug, so it's safe to pass if present.
-        if (isset($input['slug'])) $finalData['slug'] = $input['slug'];
+        if (empty($updateData)) {
+            return $this->respond(['id' => $id, 'message' => 'Nothing to update']);
+        }
 
         try {
-            $this->manager->update($id, $finalData, auth()->id());
+            $this->manager->update($id, $updateData, auth()->id());
             return $this->respond([
                 'id' => $id,
                 'message' => lang('StarGate.modelUpdated')
@@ -153,26 +131,5 @@ class Models extends ResourceController
         } catch (\Exception $e) {
             return $this->failServerError($e->getMessage());
         }
-    }
-
-    /**
-     * Helper to ensure the JSON fields contain minimum required attributes.
-     * StarDust requires 'id' and 'type' for every field.
-     */
-    private function validateFieldsJson($jsonString)
-    {
-        $data = json_decode($jsonString, true);
-        if (!is_array($data)) return false;
-
-        foreach ($data as $field) {
-            if (!isset($field['id']) || !isset($field['type'])) {
-                return false;
-            }
-        }
-
-        // Return re-encoded valid JSON (sanitized) to be safe, 
-        // or just return the original if we trust it.
-        // Returning original string since we just needed to validate structure.
-        return $jsonString;
     }
 }
