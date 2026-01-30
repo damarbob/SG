@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "c273a78622572e32192e232c40e6caf0",
+    "content-hash": "5ef0f4726920bef9fdad89bd4ed6a60f",
     "packages": [
         {
             "name": "codeigniter4/framework",
@@ -315,16 +315,16 @@
         },
         {
             "name": "damarbob/stardust",
-            "version": "v0.2.0-alpha.2",
+            "version": "dev-main",
             "source": {
                 "type": "git",
                 "url": "https://github.com/damarbob/StarDust.git",
-                "reference": "18677efb3c83f77b2514ba9854193c03b72fe7a8"
+                "reference": "bd72dcc32fcf1b703c2af3bb5455c7755978c83b"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/damarbob/StarDust/zipball/18677efb3c83f77b2514ba9854193c03b72fe7a8",
-                "reference": "18677efb3c83f77b2514ba9854193c03b72fe7a8",
+                "url": "https://api.github.com/repos/damarbob/StarDust/zipball/bd72dcc32fcf1b703c2af3bb5455c7755978c83b",
+                "reference": "bd72dcc32fcf1b703c2af3bb5455c7755978c83b",
                 "shasum": ""
             },
             "require": {
@@ -338,6 +338,7 @@
             "suggest": {
                 "codeigniter4/queue": "Required for using asynchronous indexing in production."
             },
+            "default-branch": true,
             "type": "library",
             "autoload": {
                 "files": [
@@ -354,9 +355,9 @@
             "description": "The EAV-over-JSON Library for CodeIgniter 4",
             "support": {
                 "issues": "https://github.com/damarbob/StarDust/issues",
-                "source": "https://github.com/damarbob/StarDust/tree/v0.2.0-alpha.2"
+                "source": "https://github.com/damarbob/StarDust/tree/main"
             },
-            "time": "2026-01-11T13:50:28+00:00"
+            "time": "2026-01-30T09:58:22+00:00"
         },
         {
             "name": "laminas/laminas-escaper",
@@ -2750,7 +2751,8 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
-        "codeigniter4/queue": 20
+        "codeigniter4/queue": 20,
+        "damarbob/stardust": 20
     },
     "prefer-stable": false,
     "prefer-lowest": false,

@@ -21,7 +21,7 @@
     "codeigniter4/framework": "^4.0",
     "codeigniter4/queue": "dev-develop",
     "codeigniter4/shield": "^1.2",
-    "damarbob/stardust": "^0.2.0-alpha",
+    "damarbob/stardust": "dev-main",
     "zircote/swagger-php": "^5.0"
   },
   "require-dev": {
