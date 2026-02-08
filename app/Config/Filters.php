@@ -34,6 +34,9 @@ class Filters extends BaseFilters
         'forcehttps'    => ForceHTTPS::class,
         'pagecache'     => PageCache::class,
         'performance'   => PerformanceMetrics::class,
+        'group'         => \CodeIgniter\Shield\Filters\GroupFilter::class,
+        'permission'    => \CodeIgniter\Shield\Filters\PermissionFilter::class,
+        'api-permission' => \App\Filters\ApiPermissionFilter::class,
     ];
 
     /**
