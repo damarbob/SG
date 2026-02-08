@@ -5,6 +5,7 @@ namespace App\Controllers\API\v1;
 use CodeIgniter\RESTful\ResourceController;
 use CodeIgniter\API\ResponseTrait;
 use StarDust\Services\ModelsManager;
+use StarDust\Data\ModelSearchCriteria;
 
 class Models extends ResourceController
 {
@@ -20,13 +21,38 @@ class Models extends ResourceController
     public function index()
     {
         $page    = (int)($this->request->getVar('page') ?? 1);
-        $perPage = 20;
+        $perPage = (int)($this->request->getVar('per_page') ?? 20);
 
-        // Count total for pager
+        // Extract filter parameters
+        $query         = trim($this->request->getVar('q') ?? '');
+        $createdAfter  = $this->request->getVar('created_after');
+        $createdBefore = $this->request->getVar('created_before');
+        $updatedAfter  = $this->request->getVar('updated_after');
+        $updatedBefore = $this->request->getVar('updated_before');
+        $idsParam      = $this->request->getVar('ids');
+        $ids           = !empty($idsParam) ? array_map('intval', explode(',', $idsParam)) : null;
+
+        // Hard cap to prevent abuse
+        if ($perPage > 100) {
+            $perPage = 100;
+        } elseif ($perPage < 1) {
+            $perPage = 20;
+        }
+
+        $criteria = new ModelSearchCriteria(
+            searchQuery: !empty($query) ? $query : null,
+            createdAfter: $createdAfter,
+            createdBefore: $createdBefore,
+            updatedAfter: $updatedAfter,
+            updatedBefore: $updatedBefore,
+            ids: $ids
+        );
+
+        // Count total for pager (Note: count() doesn't support filtering yet, known limitation)
         $total = $this->manager->count();
 
         // Fetch data
-        $data = $this->manager->paginate($page, $perPage);
+        $data = $this->manager->paginate($page, $perPage, $criteria);
 
         return $this->respond([
             'models' => $data,
@@ -69,20 +95,24 @@ class Models extends ResourceController
                 'id' => $modelId,
                 'message' => lang('StarGate.modelCreated')
             ]);
+        } catch (\InvalidArgumentException $e) {
+            return $this->fail($e->getMessage());
         } catch (\Exception $e) {
-            return $this->failServerError($e->getMessage());
+            log_message('error', '[Models::create] ' . $e->getMessage());
+            return $this->failServerError(lang('StarGate.genericError'));
         }
     }
 
     public function update($id = null)
     {
-        // Fetch current state to support partial updates
+        // 1. Fetch current (Existence Check)
         $current = $this->manager->find($id);
 
         if (!$current) {
             return $this->failNotFound(lang('StarGate.modelNotFound', [$id]));
         }
 
+        // 2. Validation
         $rules = [
             'name'   => 'permit_empty|min_length[3]|max_length[255]',
             'fields' => 'permit_empty|valid_json'
@@ -92,20 +122,14 @@ class Models extends ResourceController
             return $this->fail($this->validator->getErrors());
         }
 
-        $input = $this->request->getJSON(true); // Get all input
-        $updateData = [];
-
-        // Map inputs to update array
-        if (isset($input['name'])) $updateData['name'] = $input['name'];
-        if (isset($input['slug'])) $updateData['slug'] = $input['slug'];
-
-        if (isset($input['fields'])) {
-            // Strict validation moved to ModelsManager
-            $updateData['fields'] = $input['fields'];
-        }
+        // 3. Filter Input (Partial Update)
+        $input = $this->request->getJSON(true);
+        // TODO: We still whitelist fields to prevent pollution, but this could be moved to Manager.
+        $allowed = ['name', 'slug', 'fields'];
+        $updateData = array_intersect_key($input, array_flip($allowed));
 
         if (empty($updateData)) {
-            return $this->respond(['id' => $id, 'message' => 'Nothing to update']);
+            return $this->respond(['id' => $id, 'message' => lang('StarGate.noChanges')]);
         }
 
         try {
@@ -114,22 +138,25 @@ class Models extends ResourceController
                 'id' => $id,
                 'message' => lang('StarGate.modelUpdated')
             ]);
+        } catch (\InvalidArgumentException $e) {
+            return $this->fail($e->getMessage());
         } catch (\Exception $e) {
-            return $this->failServerError($e->getMessage());
+            log_message('error', '[Models::update] ' . $e->getMessage());
+            return $this->failServerError(lang('StarGate.genericError'));
         }
     }
 
     public function delete($id = null)
     {
-        if (!$this->manager->find($id)) {
-            return $this->failNotFound(lang('StarGate.modelNotFound', [$id]));
-        }
-
         try {
+            // Idempotent Delete: Just try to delete. 
+            // If it existed, it's gone. If it didn't exist, it's also gone.
             $this->manager->deleteModels([$id], auth()->id());
+
             return $this->respondDeleted(['message' => lang('StarGate.modelDeleted')]);
         } catch (\Exception $e) {
-            return $this->failServerError($e->getMessage());
+            log_message('error', '[Models::delete] ' . $e->getMessage());
+            return $this->failServerError(lang('StarGate.genericError'));
         }
     }
 }

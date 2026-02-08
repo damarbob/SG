@@ -35,7 +35,12 @@ $routes->group('api', static function ($routes) {
             $routes->post('revoke-all', 'AccessTokenController::revokeAll');
         });
 
-        $routes->resource('models', ['controller' => 'Models', 'filter' => 'tokens']);
+        // Models Routes
+        $routes->get('models', 'Models::index', ['filter' => 'tokens']);
+        $routes->get('models/(:num)', 'Models::show/$1', ['filter' => 'tokens']);
+        $routes->post('models', 'Models::create', ['filter' => ['tokens', 'api-permission:models.manage']]);
+        $routes->put('models/(:num)', 'Models::update/$1', ['filter' => ['tokens', 'api-permission:models.manage']]);
+        $routes->delete('models/(:num)', 'Models::delete/$1', ['filter' => ['tokens', 'api-permission:models.manage']]);
     });
 
     $routes->group('docs', ['namespace' => 'App\Controllers\API'], static function ($routes) {
