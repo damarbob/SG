@@ -87,6 +87,7 @@ class AuthGroups extends ShieldAuthGroups
         'users.edit'          => 'Can edit existing non-admin users',
         'users.delete'        => 'Can delete existing non-admin users',
         'beta.access'         => 'Can access beta-level features',
+        'models.manage'       => 'Can manage models (create/edit/delete)',
     ];
 
     /**
@@ -102,6 +103,7 @@ class AuthGroups extends ShieldAuthGroups
             'admin.*',
             'users.*',
             'beta.*',
+            'models.manage',
         ],
         'admin' => [
             'admin.access',
