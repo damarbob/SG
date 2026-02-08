@@ -21,4 +21,6 @@ return [
     'modelCreated'          => 'Model created successfully',
     'modelUpdated'          => 'Model updated successfully',
     'modelDeleted'          => 'Model deleted successfully',
+    'genericError'          => 'An internal error occurred.',
+    'noChanges'             => 'No changes were made.',
 ];
