@@ -122,18 +122,15 @@ class Models extends ResourceController
             return $this->fail($this->validator->getErrors());
         }
 
-        // 3. Filter Input (Partial Update)
+        // 3. Update via Manager (Partial Update supported)
         $input = $this->request->getJSON(true);
-        // TODO: We still whitelist fields to prevent pollution, but this could be moved to Manager.
-        $allowed = ['name', 'slug', 'fields'];
-        $updateData = array_intersect_key($input, array_flip($allowed));
 
-        if (empty($updateData)) {
+        if (empty($input)) {
             return $this->respond(['id' => $id, 'message' => lang('StarGate.noChanges')]);
         }
 
         try {
-            $this->manager->update($id, $updateData, auth()->id());
+            $this->manager->update($id, $input, auth()->id());
             return $this->respond([
                 'id' => $id,
                 'message' => lang('StarGate.modelUpdated')

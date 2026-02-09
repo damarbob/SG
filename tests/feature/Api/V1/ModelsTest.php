@@ -203,6 +203,30 @@ class ModelsTest extends CIUnitTestCase
         $result->assertStatus(200);
     }
 
+    public function testUpdateIgnoresExtraFields()
+    {
+        $admin = $this->createSuperAdmin();
+        $mock = $this->mockManager();
+
+        $mock->expects($this->once())
+            ->method('find')
+            ->with(123)
+            ->willReturn(['id' => 123, 'name' => 'Old Name']);
+
+        // Expect update to be called with ONLY valid fields, OR if manager handles it, then valid fields + extra.
+        // But my refactor REMOVED the filtering in Controller, so Manager receives EVERYTHING.
+        // So the expectation is that Manager::update receives the full input.
+        $mock->expects($this->once())
+            ->method('update')
+            ->with(123, ['name' => 'New Name', 'extra_field' => 'should_be_passed_to_manager'], $this->anything());
+
+        $result = $this->withHeaders($this->getHeaders($admin))
+            ->withBody(json_encode(['name' => 'New Name', 'extra_field' => 'should_be_passed_to_manager']))
+            ->put('api/v1/models/123');
+
+        $result->assertStatus(200);
+    }
+
     public function testUpdateAsUserForbidden()
     {
         $user = $this->createTestUser();
