@@ -20,49 +20,61 @@ class Models extends ResourceController
 
     public function index()
     {
-        $page    = (int)($this->request->getVar('page') ?? 1);
-        $perPage = (int)($this->request->getVar('per_page') ?? 20);
+        // 1. Parse Request
+        $qp = \App\Libraries\RequestQueryParser::parse($this->request);
 
-        // Extract filter parameters
-        $query         = trim($this->request->getVar('q') ?? '');
-        $createdAfter  = $this->request->getVar('created_after');
-        $createdBefore = $this->request->getVar('created_before');
-        $updatedAfter  = $this->request->getVar('updated_after');
-        $updatedBefore = $this->request->getVar('updated_before');
-        $idsParam      = $this->request->getVar('ids');
-        $ids           = !empty($idsParam) ? array_map('intval', explode(',', $idsParam)) : null;
-
-        // Hard cap to prevent abuse
-        if ($perPage > 100) {
-            $perPage = 100;
-        } elseif ($perPage < 1) {
-            $perPage = 20;
+        // 2. Inject global search into the generic filter pipeline
+        $filters = $qp['filters'];
+        if ($qp['q'] !== null) {
+            $filters['q'] = $qp['q'];
         }
 
+        // 3. Create Search Criteria
         $criteria = new ModelSearchCriteria(
-            searchQuery: !empty($query) ? $query : null,
-            createdAfter: $createdAfter,
-            createdBefore: $createdBefore,
-            updatedAfter: $updatedAfter,
-            updatedBefore: $updatedBefore,
-            ids: $ids
+            searchQuery: $filters['q'] ?? null,
+            createdAfter: $filters['created_at']['gt'] ?? null,
+            createdBefore: $filters['created_at']['lt'] ?? null,
+            updatedAfter: $filters['updated_at']['gt'] ?? null,
+            updatedBefore: $filters['updated_at']['lt'] ?? null,
+            ids: $filters['ids'] ?? null
         );
 
-        // Count total for pager (Note: count() doesn't support filtering yet, known limitation)
-        $total = $this->manager->count();
+        // 4. Get Data (Count is approximate/total for now, as count() doesn't support sophisticated filtering yet efficiently)
+        // TODO: Update count() to support filtering in future if needed for proper pagination metadata
+        $total = $this->manager->count($criteria);
 
-        // Fetch data
-        $data = $this->manager->paginate($page, $perPage, $criteria);
+        $data = $this->manager->paginate($qp['page'], $qp['limit'], $criteria);
 
-        return $this->respond([
-            'models' => $data,
-            'pager'  => [
-                'currentPage' => $page,
-                'perPage'     => $perPage,
-                'total'       => $total,
-                'lastPage'    => ceil($total / $perPage)
+        // 5. Field Projection (Sparse Fieldsets)
+        if (!empty($qp['fields'])) {
+            $allowedKeys = array_flip($qp['fields']);
+            $data = array_map(
+                fn(array $row) => array_intersect_key($row, $allowedKeys),
+                $data
+            );
+        }
+
+        // 6. Construct Response Envelope
+        $response = [
+            'meta' => [
+                'code' => 200,
+                'timestamp' => time()
+            ],
+            'data' => $data,
+            'pagination' => [
+                'current_page' => $qp['page'],
+                'per_page'     => $qp['limit'],
+                'total_items'  => $total,
+                'total_pages'  => ceil($total / $qp['limit'])
             ]
-        ]);
+        ];
+
+        // 6. Echo Request ID (Concurrency Control)
+        if ($qp['request_id']) {
+            $response['request_id'] = $qp['request_id'];
+        }
+
+        return $this->respond($response);
     }
 
     public function show($id = null)

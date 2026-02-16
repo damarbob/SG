@@ -28,7 +28,7 @@ interface ModelsDoc
                 schema: new OA\Schema(type: 'integer', default: 1)
             ),
             new OA\Parameter(
-                name: 'per_page',
+                name: 'limit',
                 in: 'query',
                 description: 'Items per page (max 100)',
                 required: false,
@@ -37,44 +37,45 @@ interface ModelsDoc
             new OA\Parameter(
                 name: 'q',
                 in: 'query',
-                description: 'Search query for name or slug',
+                description: 'Global search query',
                 required: false,
                 schema: new OA\Schema(type: 'string')
             ),
             new OA\Parameter(
-                name: 'created_after',
+                name: 'sort',
                 in: 'query',
-                description: 'Filter by creation date (after)',
+                description: 'Sort fields (e.g. -created_at,name)',
                 required: false,
-                schema: new OA\Schema(type: 'string', format: 'date-time')
+                schema: new OA\Schema(type: 'string')
             ),
             new OA\Parameter(
-                name: 'created_before',
+                name: 'filter',
                 in: 'query',
-                description: 'Filter by creation date (before)',
+                description: 'Filter array (e.g. filter[status]=published)',
                 required: false,
-                schema: new OA\Schema(type: 'string', format: 'date-time')
+                style: 'deepObject',
+                explode: true,
+                schema: new OA\Schema(
+                    type: 'object',
+                    additionalProperties: new OA\AdditionalProperties(
+                        type: 'string'
+                    ),
+                    example: ['status' => 'published']
+                )
             ),
             new OA\Parameter(
-                name: 'updated_after',
+                name: 'fields',
                 in: 'query',
-                description: 'Filter by update date (after)',
+                description: 'Sparse fieldset (e.g. id,name)',
                 required: false,
-                schema: new OA\Schema(type: 'string', format: 'date-time')
+                schema: new OA\Schema(type: 'string')
             ),
             new OA\Parameter(
-                name: 'updated_before',
+                name: 'request_id',
                 in: 'query',
-                description: 'Filter by update date (before)',
+                description: 'Client-side request identifier for concurrency control (e.g. DataTables draw parameter)',
                 required: false,
-                schema: new OA\Schema(type: 'string', format: 'date-time')
-            ),
-            new OA\Parameter(
-                name: 'ids',
-                in: 'query',
-                description: 'Filter by IDs (comma separated)',
-                required: false,
-                schema: new OA\Schema(type: 'string', example: '1,2,3')
+                schema: new OA\Schema(type: 'string')
             )
         ],
         responses: [
@@ -84,7 +85,15 @@ interface ModelsDoc
                 content: new OA\JsonContent(
                     properties: [
                         new OA\Property(
-                            property: 'models',
+                            property: 'meta',
+                            type: 'object',
+                            properties: [
+                                new OA\Property(property: 'code', type: 'integer', example: 200),
+                                new OA\Property(property: 'timestamp', type: 'integer')
+                            ]
+                        ),
+                        new OA\Property(
+                            property: 'data',
                             type: 'array',
                             items: new OA\Items(
                                 properties: [
@@ -97,15 +106,16 @@ interface ModelsDoc
                             )
                         ),
                         new OA\Property(
-                            property: 'pager',
+                            property: 'pagination',
                             type: 'object',
                             properties: [
-                                new OA\Property(property: 'currentPage', type: 'integer', example: 1),
-                                new OA\Property(property: 'perPage', type: 'integer', example: 20),
-                                new OA\Property(property: 'total', type: 'integer', example: 50),
-                                new OA\Property(property: 'lastPage', type: 'integer', example: 3)
+                                new OA\Property(property: 'current_page', type: 'integer', example: 1),
+                                new OA\Property(property: 'per_page', type: 'integer', example: 20),
+                                new OA\Property(property: 'total_items', type: 'integer', example: 50),
+                                new OA\Property(property: 'total_pages', type: 'integer', example: 3)
                             ]
-                        )
+                        ),
+                        new OA\Property(property: 'request_id', type: 'string', example: 'req_123')
                     ]
                 )
             ),

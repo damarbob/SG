@@ -95,20 +95,20 @@ class ModelsTest extends CIUnitTestCase
 
         $result->assertStatus(200);
         $json = json_decode($result->response()->getBody(), true);
-        $this->assertEquals(20, $json['pager']['perPage']);
+        $this->assertEquals(20, $json['pagination']['per_page']);
 
         // Test custom per_page
         $result = $this->withHeaders($this->getHeaders($user))
-            ->get('api/v1/models?per_page=5');
+            ->get('api/v1/models?limit=5'); // Use new 'limit' param
 
         $json = json_decode($result->response()->getBody(), true);
-        $this->assertEquals(5, $json['pager']['perPage']);
+        $this->assertEquals(5, $json['pagination']['per_page']);
 
         // Check hard cap
         $result = $this->withHeaders($this->getHeaders($user))
-            ->get('api/v1/models?per_page=150');
+            ->get('api/v1/models?limit=150');
         $json = json_decode($result->response()->getBody(), true);
-        $this->assertEquals(100, $json['pager']['perPage']);
+        $this->assertEquals(100, $json['pagination']['per_page']);
     }
 
     private function createSuperAdmin()
@@ -136,8 +136,8 @@ class ModelsTest extends CIUnitTestCase
         // Test with search
         $this->withHeaders($this->getHeaders($user))->get('api/v1/models?q=test');
 
-        // Test with date range (just to trigger the DTO creation)
-        $this->withHeaders($this->getHeaders($user))->get('api/v1/models?created_after=2024-01-01');
+        // Test with date range (using new filter syntax)
+        $this->withHeaders($this->getHeaders($user))->get('api/v1/models?filter[created_at][gt]=2024-01-01');
     }
 
     public function testCreateAsSuperadmin()
@@ -267,5 +267,21 @@ class ModelsTest extends CIUnitTestCase
 
         $result->assertStatus(403);
         $result->assertJSONFragment(['error' => 'Access denied']);
+    }
+    public function testIndexReturnsRequestId()
+    {
+        $user = $this->createSuperAdmin();
+        $mock = $this->mockManager();
+        $mock->method('paginate')->willReturn([]);
+        $mock->method('count')->willReturn(0);
+
+        $result = $this->withHeaders($this->getHeaders($user))
+            ->get('api/v1/models?request_id=req_555');
+
+        $result->assertStatus(200);
+        $json = json_decode($result->response()->getBody(), true);
+
+        $this->assertArrayHasKey('request_id', $json);
+        $this->assertEquals('req_555', $json['request_id']);
     }
 }
