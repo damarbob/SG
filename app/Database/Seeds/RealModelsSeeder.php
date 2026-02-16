@@ -3,6 +3,7 @@
 namespace App\Database\Seeds;
 
 use CodeIgniter\Database\Seeder;
+use CodeIgniter\CLI\CLI;
 use CodeIgniter\Shield\Entities\User;
 use CodeIgniter\Shield\Models\UserModel;
 use Faker\Factory;
@@ -21,9 +22,9 @@ class RealModelsSeeder extends Seeder
         $user = $this->getSeederUser();
 
         // 2. Generate Realistic Models
-        $totalModels = 50;
-        if (isset($this->CLI)) {
-            $this->CLI->write("Seeding {$totalModels} models...", 'yellow');
+        $totalModels = 12;
+        if (is_cli()) {
+            CLI::write("Seeding {$totalModels} models...", 'yellow');
         }
 
         // Predictable Names for Search Testing
@@ -67,19 +68,19 @@ class RealModelsSeeder extends Seeder
 
                 $this->backdateModel($modelId, $faker, $isCreatedOneYearAgo, $isCreatedNow, $hasSeparateUpdate);
 
-                if (isset($this->CLI)) {
-                    $this->CLI->print('.');
+                if (is_cli()) {
+                    CLI::print('.');
                 }
             } catch (\Exception $e) {
-                if (isset($this->CLI)) {
-                    $this->CLI->error("Failed to seed model: " . $e->getMessage());
+                if (is_cli()) {
+                    CLI::error("Failed to seed model: " . $e->getMessage());
                 }
             }
         }
 
-        if (isset($this->CLI)) {
-            $this->CLI->newLine();
-            $this->CLI->write("Done!", 'green');
+        if (is_cli()) {
+            CLI::newLine();
+            CLI::write("Done!", 'green');
         }
     }
 
