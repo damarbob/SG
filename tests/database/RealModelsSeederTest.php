@@ -28,6 +28,12 @@ class RealModelsSeederTest extends CIUnitTestCase
     protected function setUp(): void
     {
         parent::setUp();
+
+        // RuntimeIndexer uses MariaDB-specific DDL (virtual columns, ALGORITHM=INSTANT)
+        // that SQLite cannot execute. Mock it as a no-op for SQLite testing.
+        $mock = $this->createMock(\StarDust\Libraries\RuntimeIndexer::class);
+        $mock->method('syncIndexes')->willReturn(null);
+        \Config\Services::injectMock('runtimeIndexer', $mock);
     }
 
     public function testSeederAndPurgerCycle()
