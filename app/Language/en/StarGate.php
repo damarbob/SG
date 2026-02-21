@@ -23,4 +23,8 @@ return [
     'modelDeleted'          => 'Model deleted successfully',
     'genericError'          => 'An internal error occurred.',
     'noChanges'             => 'No changes were made.',
+    'entryNotFound'         => 'Entry with ID {0} not found.',
+    'entryCreated'          => 'Entry created successfully.',
+    'entryUpdated'          => 'Entry updated successfully.',
+    'entryDeleted'          => 'Entry deleted successfully.',
 ];
