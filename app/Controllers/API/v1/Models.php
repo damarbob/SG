@@ -36,25 +36,22 @@ class Models extends ResourceController
             createdBefore: $filters['created_at']['lt'] ?? null,
             updatedAfter: $filters['updated_at']['gt'] ?? null,
             updatedBefore: $filters['updated_at']['lt'] ?? null,
-            ids: $filters['ids'] ?? null
+            ids: $filters['ids'] ?? null,
+            sort: $qp['sort'] ?? null,
         );
 
-        // 4. Get Data (Count is approximate/total for now, as count() doesn't support sophisticated filtering yet efficiently)
-        // TODO: Update count() to support filtering in future if needed for proper pagination metadata
+        // 3b. Field Projection
+        if (!empty($qp['fields'])) {
+            $fieldsToSelect = array_unique(array_merge(['id'], $qp['fields']));
+            $criteria = $criteria->withSelectedFields($fieldsToSelect);
+        }
+
+        // 4. Get Data
         $total = $this->manager->count($criteria);
 
         $data = $this->manager->paginate($qp['page'], $qp['limit'], $criteria);
 
-        // 5. Field Projection (Sparse Fieldsets)
-        if (!empty($qp['fields'])) {
-            $allowedKeys = array_flip($qp['fields']);
-            $data = array_map(
-                fn(array $row) => array_intersect_key($row, $allowedKeys),
-                $data
-            );
-        }
-
-        // 6. Construct Response Envelope
+        // 5. Construct Response Envelope
         $response = [
             'meta' => [
                 'code' => 200,
@@ -65,7 +62,7 @@ class Models extends ResourceController
                 'current_page' => $qp['page'],
                 'per_page'     => $qp['limit'],
                 'total_items'  => $total,
-                'total_pages'  => ceil($total / $qp['limit'])
+                'total_pages'  => (int) ceil($total / $qp['limit'])
             ]
         ];
 
