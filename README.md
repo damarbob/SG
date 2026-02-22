@@ -1,68 +1,47 @@
-# CodeIgniter 4 Application Starter
+# StarGate: Universal API Implementation
 
-## What is CodeIgniter?
+**Version**: `0.1.0-alpha`
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+StarGate is the high-level API implementation for tabular data, built on top of the **StarDust** EAV database abstraction layer. It aims to provide a standardized, RESTful interface capable of serving massive dynamic datasets to modern frontend data grids.
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+## Architecture
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+StarGate handles the HTTP layer, standardizing pagination, multi-column sorting, granular filtering (with operators), field projection, and relationship hydration. Behind the scenes, it leverages the CodeIgniter 4 framework and strictly depends on the underlying StarDust library to persist and query dynamic entity structures. 
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
 
-## Installation & updates
+## Versioning Notice (Alpha Status)
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+StarGate is currently in an **Alpha** state. 
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+While its HTTP layer and business logic are tested, feature-complete, and structurally sound, it is deliberately held in alpha because of the state of the underlying `damarbob/stardust` library.
 
-## Setup
+**Important Deployment Pairing:**
+This `v0.1.0-alpha` release is explicitly paired with StarDust `v0.2.0-alpha.3`. 
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+StarDust 0.2.0 relies on a "Virtual Column" indexing architecture which is highly performant for small datasets but triggers strict, low-level InnoDB "row size" limits and metadata locks when scaled to hundreds of dynamic fields or under high concurrency. Because StarGate passes queries directly to StarDust, StarGate's scalability is fundamentally bottlenecked by this infrastructure limitation.
 
-## Important Change with index.php
+## Roadmap to v1.0
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+A major architectural shift is planned for the underlying StarDust library in its `v0.3.0` release. StarDust will transition to a **Slot-Based Indexing Strategy** (Sparse Columns) to solve the horizontal scalability constraints and establish enterprise schema stability.
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+Once StarDust achieves this resilient `0.3.0` architecture, StarGate will be updated in tandem, clearing the path towards its own `0.2.0` (Beta) and eventually `v1.0.0` production-ready release. 
 
-**Please** read the user guide for a better explanation of how CI4 works!
+For more details on the scalability limits and the upcoming architecture, please refer to the `FAQ.md`.
 
-## Repository Management
+## Installation 
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+*(Instructions tailored for CodeIgniter 4 / Composer)*
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+```bash
+composer update
+```
 
-## Server Requirements
+Ensure your `.env` is configured properly for database connectivity.
 
-PHP version 8.1 or higher is required, with the following extensions installed:
+## Core Feature Overview
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
-
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - If you are still using PHP 7.4 or 8.0, you should upgrade immediately.
-> - The end of life date for PHP 8.1 will be December 31, 2025.
-
-Additionally, make sure that the following extensions are enabled in your PHP:
-
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+- **Dynamic Models**: Serve limitless schemas through the Entries Endpoint. 
+- **Universal Querying**: First-class JSON support for queries containing pagination, sorting arrays, and complex operator conditions (`eq`, `neq`, `gt`, `lt`, `like`, `in`).
+- **Resource Protection**: Built-in permission enforcing via CodeIgniter Shield. 
+- **Sparse Field Projection**: Limit database IO and payload payloads dynamically (`?fields=id,title`).
+- **Bulk Delete**: Transactional bulk deletions via JSON payloads.
