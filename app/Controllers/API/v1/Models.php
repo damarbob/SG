@@ -76,6 +76,7 @@ class Models extends ResourceController
 
     public function show($id = null)
     {
+        $id = (int) $id;
         $model = $this->manager->find($id);
 
         if (!$model) {
@@ -92,11 +93,15 @@ class Models extends ResourceController
             'fields' => 'required|valid_json' // Strict check for 'fields' Key
         ];
 
-        if (!$this->validate($rules)) {
-            return $this->fail($this->validator->getErrors());
+        $input = $this->request->getJsonVar(null, true);
+
+        if (empty($input) || !is_array($input)) {
+            return $this->failValidationErrors('Invalid or empty payload');
         }
 
-        $input = $this->request->getJSON(true);
+        if (!$this->validateData($input, $rules)) {
+            return $this->fail($this->validator->getErrors());
+        }
 
         try {
             $modelId = $this->manager->create($input, auth()->id());
@@ -114,6 +119,7 @@ class Models extends ResourceController
 
     public function update($id = null)
     {
+        $id = (int) $id;
         // 1. Fetch current (Existence Check)
         $current = $this->manager->find($id);
 
@@ -127,12 +133,16 @@ class Models extends ResourceController
             'fields' => 'permit_empty|valid_json'
         ];
 
-        if (!$this->validate($rules)) {
-            return $this->fail($this->validator->getErrors());
+        // 3. Update via Manager (Partial Update supported)
+        $input = $this->request->getJsonVar(null, true);
+
+        if (empty($input) || !is_array($input)) {
+            return $this->failValidationErrors('Invalid or empty payload');
         }
 
-        // 3. Update via Manager (Partial Update supported)
-        $input = $this->request->getJSON(true);
+        if (!$this->validateData($input, $rules)) {
+            return $this->fail($this->validator->getErrors());
+        }
 
         if (empty($input)) {
             return $this->respond(['id' => $id, 'message' => lang('StarGate.noChanges')]);
@@ -154,6 +164,7 @@ class Models extends ResourceController
 
     public function delete($id = null)
     {
+        $id = (int) $id;
         try {
             // Idempotent Delete: Just try to delete. 
             // If it existed, it's gone. If it didn't exist, it's also gone.
@@ -162,6 +173,34 @@ class Models extends ResourceController
             return $this->respondDeleted(['message' => lang('StarGate.modelDeleted')]);
         } catch (\Exception $e) {
             log_message('error', '[Models::delete] ' . $e->getMessage());
+            return $this->failServerError(lang('StarGate.genericError'));
+        }
+    }
+
+    public function deleteBatch()
+    {
+        $rules = [
+            'ids'   => 'required|is_array',
+            'ids.*' => 'numeric'
+        ];
+
+        $input = $this->request->getJsonVar(null, true);
+
+        if (empty($input) || !is_array($input)) {
+            return $this->failValidationErrors('Invalid or empty payload');
+        }
+
+        if (!$this->validateData($input, $rules)) {
+            return $this->fail($this->validator->getErrors());
+        }
+
+        try {
+            $ids = array_map('intval', $input['ids']);
+            $this->manager->deleteModels($ids, auth()->id());
+
+            return $this->respondDeleted(['message' => lang('StarGate.modelsDeletedBatch', [count($ids)]) ?? 'Models deleted successfully.']);
+        } catch (\Exception $e) {
+            log_message('error', '[Models::deleteBatch] ' . $e->getMessage());
             return $this->failServerError(lang('StarGate.genericError'));
         }
     }

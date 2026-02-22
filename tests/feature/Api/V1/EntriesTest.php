@@ -324,4 +324,55 @@ class EntriesTest extends CIUnitTestCase
         $result->assertStatus(403);
         $result->assertJSONFragment(['error' => 'Access denied']);
     }
+
+    public function testDeleteBatchAsSuperadmin()
+    {
+        $admin = $this->createSuperAdmin();
+        $headers = $this->getHeaders($admin);
+
+        $payload = ['ids' => [1, 2, 3]];
+
+        $response = $this->withHeaders($headers)
+                         ->withBodyFormat('json')
+                         ->delete('/api/v1/entries', $payload);
+
+        $response->assertStatus(200);
+        $response->assertJSONFragment([
+            'message' => lang('StarGate.entriesDeletedBatch', [3])
+        ]);
+    }
+
+    public function testDeleteBatchAsUserForbidden()
+    {
+        $user = $this->createTestUser();
+        $headers = $this->getHeaders($user);
+
+        $payload = ['ids' => [1, 2, 3]];
+
+        $response = $this->withHeaders($headers)
+                         ->withBodyFormat('json')
+                         ->delete('/api/v1/entries', $payload);
+
+        $response->assertStatus(403);
+    }
+
+    public function testDeleteBatchValidationFails()
+    {
+        $admin = $this->createSuperAdmin();
+        $headers = $this->getHeaders($admin);
+
+        // 1. Missing ids
+        $response = $this->withHeaders($headers)
+                         ->withBodyFormat('json')
+                         ->delete('/api/v1/entries', []);
+
+        $response->assertStatus(400);
+
+        // 2. Non-array ids
+        $response = $this->withHeaders($headers)
+                         ->withBodyFormat('json')
+                         ->delete('/api/v1/entries', ['ids' => 'not-an-array']);
+
+        $response->assertStatus(400);
+    }
 }

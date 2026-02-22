@@ -102,7 +102,11 @@ class Entries extends ResourceController
             'fields'   => 'required|valid_json',
         ];
 
-        $input = $this->request->getJSON(true);
+        $input = $this->request->getJsonVar(null, true);
+
+        if (empty($input) || !is_array($input)) {
+            return $this->fail('Invalid or empty payload', 400);
+        }
 
         if (! $this->validateData($input, $rules)) {
             return $this->fail($this->validator->getErrors());
@@ -140,7 +144,11 @@ class Entries extends ResourceController
             'fields' => 'permit_empty|valid_json',
         ];
 
-        $input = $this->request->getJSON(true);
+        $input = $this->request->getJsonVar(null, true);
+
+        if (empty($input) || !is_array($input)) {
+            return $this->fail('Invalid or empty payload', 400);
+        }
 
         if (! $this->validateData($input, $rules)) {
             return $this->fail($this->validator->getErrors());
@@ -176,6 +184,34 @@ class Entries extends ResourceController
             return $this->respondDeleted(['message' => lang('StarGate.entryDeleted')]);
         } catch (\Exception $e) {
             log_message('error', '[Entries::delete] ' . $e->getMessage());
+            return $this->failServerError(lang('StarGate.genericError'));
+        }
+    }
+
+    public function deleteBatch()
+    {
+        $rules = [
+            'ids'   => 'required|is_array',
+            'ids.*' => 'numeric'
+        ];
+
+        $input = $this->request->getJsonVar(null, true);
+
+        if (empty($input) || !is_array($input)) {
+            return $this->fail('Invalid or empty payload', 400);
+        }
+
+        if (! $this->validateData($input, $rules)) {
+            return $this->fail($this->validator->getErrors());
+        }
+
+        try {
+            $ids = array_map('intval', $input['ids']);
+            $this->manager->deleteEntries($ids, auth()->id());
+
+            return $this->respondDeleted(['message' => lang('StarGate.entriesDeletedBatch', [count($ids)]) ?? 'Entries deleted successfully.']);
+        } catch (\Exception $e) {
+            log_message('error', '[Entries::deleteBatch] ' . $e->getMessage());
             return $this->failServerError(lang('StarGate.genericError'));
         }
     }

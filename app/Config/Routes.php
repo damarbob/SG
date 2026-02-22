@@ -41,6 +41,7 @@ $routes->group('api', static function ($routes) {
         $routes->post('models', 'Models::create', ['filter' => ['tokens', 'api-permission:models.manage']]);
         $routes->put('models/(:num)', 'Models::update/$1', ['filter' => ['tokens', 'api-permission:models.manage']]);
         $routes->delete('models/(:num)', 'Models::delete/$1', ['filter' => ['tokens', 'api-permission:models.manage']]);
+        $routes->delete('models', 'Models::deleteBatch', ['filter' => ['tokens', 'api-permission:models.manage']]);
 
         // Entries Routes
         $routes->get('entries', 'Entries::index', ['filter' => 'tokens']);
@@ -48,6 +49,7 @@ $routes->group('api', static function ($routes) {
         $routes->post('entries', 'Entries::create', ['filter' => ['tokens', 'api-permission:entries.manage']]);
         $routes->put('entries/(:num)', 'Entries::update/$1', ['filter' => ['tokens', 'api-permission:entries.manage']]);
         $routes->delete('entries/(:num)', 'Entries::delete/$1', ['filter' => ['tokens', 'api-permission:entries.manage']]);
+        $routes->delete('entries', 'Entries::deleteBatch', ['filter' => ['tokens', 'api-permission:entries.manage']]);
     });
 
     $routes->group('docs', ['namespace' => 'App\Controllers\API'], static function ($routes) {

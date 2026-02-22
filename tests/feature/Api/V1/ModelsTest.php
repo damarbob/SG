@@ -258,15 +258,67 @@ class ModelsTest extends CIUnitTestCase
     public function testDeleteAsUserForbidden()
     {
         $user = $this->createTestUser();
-        $mock = $this->mockManager();
+        $headers = $this->getHeaders($user);
 
-        $mock->expects($this->never())->method('deleteModels');
+        // Try to delete Model 1 (should fail)
+        $response = $this->withHeaders($headers)
+                         ->delete('/api/v1/models/1');
 
-        $result = $this->withHeaders($this->getHeaders($user))
-            ->delete('api/v1/models/123');
+        $response->assertStatus(403);
+        $response->assertJSONFragment(['error' => 'Access denied']);
+    }
 
-        $result->assertStatus(403);
-        $result->assertJSONFragment(['error' => 'Access denied']);
+    public function testDeleteBatchAsSuperadmin()
+    {
+        $admin = $this->createSuperAdmin();
+        $headers = $this->getHeaders($admin);
+
+        $payload = ['ids' => [1, 2, 3]];
+
+        $response = $this->withHeaders($headers)
+                         ->withBodyFormat('json')
+                         ->delete('/api/v1/models', $payload);
+
+        $response->assertStatus(200);
+        $response->assertJSONFragment([
+            'message' => lang('StarGate.modelsDeletedBatch', [3])
+        ]);
+
+        // Verify underlying system was called accurately if practical, or test data side effects
+    }
+
+    public function testDeleteBatchAsUserForbidden()
+    {
+        $user = $this->createTestUser();
+        $headers = $this->getHeaders($user);
+
+        $payload = ['ids' => [1, 2, 3]];
+
+        $response = $this->withHeaders($headers)
+                         ->withBodyFormat('json')
+                         ->delete('/api/v1/models', $payload);
+
+        $response->assertStatus(403);
+    }
+
+    public function testDeleteBatchValidationFails()
+    {
+        $admin = $this->createSuperAdmin();
+        $headers = $this->getHeaders($admin);
+
+        // 1. Missing ids
+        $response = $this->withHeaders($headers)
+                         ->withBodyFormat('json')
+                         ->delete('/api/v1/models', []);
+
+        $response->assertStatus(400);
+
+        // 2. Non-array ids
+        $response = $this->withHeaders($headers)
+                         ->withBodyFormat('json')
+                         ->delete('/api/v1/models', ['ids' => 'not-an-array']);
+
+        $response->assertStatus(400);
     }
     public function testIndexReturnsRequestId()
     {
