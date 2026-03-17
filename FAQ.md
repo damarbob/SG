@@ -20,6 +20,6 @@ Currently, StarDust relies on dynamic DDL operations (MySQL Virtual Generated Co
 
 We must resolve the fundamental infrastructure limits within StarDust before we can declare StarGate production-ready.
 
-The immediate engineering priority is refactoring StarDust for version `0.3.0` to utilize a **Slot-Based Indexing Strategy** (Sparse Columns). This metamorphosis will decouple the logical application fields from physical `ALTER TABLE` operations, effectively solving the scalability crisis. 
+The immediate engineering priority is refactoring StarDust for version `0.3.0` to utilize **Vertical Schema Partitioning**. This metamorphosis will address the scalability limits and OOM vulnerabilities found in the Virtual Column architecture. 
 
 Once StarDust `0.3.0` is deployed and stable, StarGate will integrate those changes and be promoted to `v0.2.0` (or beta), at which point it will be cleared for high-scale environments.

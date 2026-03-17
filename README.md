@@ -22,7 +22,7 @@ StarDust 0.2.0 relies on a "Virtual Column" indexing architecture which is highl
 
 ## Roadmap to v1.0
 
-A major architectural shift is planned for the underlying StarDust library in its `v0.3.0` release. StarDust will transition to a **Slot-Based Indexing Strategy** (Sparse Columns) to solve the horizontal scalability constraints and establish enterprise schema stability.
+A major architectural shift is planned for the underlying StarDust library in its `v0.3.0` release. StarDust will transition to **Vertical Schema Partitioning** to address scalability limits and OOM vulnerabilities found in the Virtual Column architecture, establishing enterprise schema stability.
 
 Once StarDust achieves this resilient `0.3.0` architecture, StarGate will be updated in tandem, clearing the path towards its own `0.2.0` (Beta) and eventually `v1.0.0` production-ready release. 
 
